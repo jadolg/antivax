@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS build
+FROM golang:1.22-alpine AS build
 
 RUN adduser --uid 10000 --disabled-password antivax
 
