@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: antivax
+  annotations:
+    linkerd.io/inject: enabled
+  labels:
+    antivax: enabled
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: antivax-self-signed-issuer
+  namespace: antivax
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: antivax-tls
+  namespace: antivax
+spec:
+  secretName: antivax-tls
+  issuerRef:
+    name: antivax-self-signed-issuer
+    kind: Issuer
+  commonName: antivax.antivax.svc.cluster.local
+  dnsNames:
+    - antivax.antivax.svc.cluster.local
+    - antivax.antivax.svc
+  isCA: true
+  privateKey:
+    algorithm: ECDSA
+  usages:
+    - cert sign
+    - crl sign
+    - server auth
+    - client auth
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: antivax
+  namespace: antivax
+spec:
+  selector:
+    matchLabels:
+      app: antivax
+  template:
+    metadata:
+      labels:
+        app: antivax
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - image: ghcr.io/jadolg/antivax:latest
+          name: antivax
+          volumeMounts:
+            - name: tls
+              mountPath: "/etc/admission-webhook/tls"
+          livenessProbe:
+            httpGet:
+              port: 8443
+              path: /health
+              scheme: HTTPS
+      volumes:
+        - name: tls
+          secret:
+            secretName: antivax-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: antivax
+  namespace: antivax
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 8443
+  selector:
+    app: antivax
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: antivax
+  labels:
+    app: antivax
+  annotations:
+    cert-manager.io/inject-ca-from: antivax/antivax-tls
+webhooks:
+  - name: antivax.default.svc.cluster.local
+    clientConfig:
+      service:
+        name: antivax
+        namespace: antivax
+        path: "/mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        resources: ["cronjobs"]
+    namespaceSelector:
+      matchLabels:
+        antivax: enabled
+    admissionReviewVersions:
+      - v1
+    sideEffects: None
