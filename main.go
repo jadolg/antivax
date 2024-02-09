@@ -17,9 +17,9 @@ func main() {
 	http.HandleFunc("/mutate", MutateCronjobs)
 	http.HandleFunc("/health", Healthcheck)
 
-	log.Print("Listening on port 8443...")
+	log.Printf("Listening on port %d...", *port)
 
-	log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", port), *cert, *key, nil))
+	log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", *port), *cert, *key, nil))
 }
 
 func MutateCronjobs(w http.ResponseWriter, r *http.Request) {
