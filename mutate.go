@@ -39,6 +39,9 @@ func Mutate(body []byte) ([]byte, error) {
 			}
 		}
 		resp.Patch, err = json.Marshal([]interface{}{op})
+		if err != nil {
+			return nil, err
+		}
 
 		resp.Result = &metav1.Status{
 			Status: "Success",
