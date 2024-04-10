@@ -1,4 +1,4 @@
-# Antivax
+# Antivax (pun intended)
 
 A MutatingWebhook that will avoid Linkerd injection on your CronJobs
 
