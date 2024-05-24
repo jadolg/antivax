@@ -12,9 +12,18 @@ func main() {
 	cert := flag.String("cert", "/etc/admission-webhook/tls/tls.crt", "Path to the certificate file")
 	key := flag.String("key", "/etc/admission-webhook/tls/tls.key", "Path to the key file")
 	port := flag.Int("port", 8443, "Port to listen on")
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
+
 	flag.Parse()
 
-	http.HandleFunc("/mutate", MutateCronjobs)
+	if *verbose {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
+	http.HandleFunc("/mutate-cronjob", Mutate)
+	http.HandleFunc("/mutate-job", Mutate)
 	http.HandleFunc("/health", Healthcheck)
 
 	log.Printf("Listening on port %d...", *port)
@@ -22,31 +31,41 @@ func main() {
 	log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", *port), *cert, *key, nil))
 }
 
-func MutateCronjobs(w http.ResponseWriter, r *http.Request) {
+func Mutate(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
+	const writingErrorFormat = "Error writing response: %v"
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := fmt.Fprintf(w, "%s", err)
 		if err != nil {
-			log.Errorf("error writing response: %v", err)
+			log.Errorf(writingErrorFormat, err)
 		}
 	}
-	mutated, err := Mutate(body)
+	mutated := []byte{}
+	log.Debugf("Received request: %s", r.URL.Path)
+	log.Debugf("recv: %s\n", string(body))
+	switch r.URL.Path {
+	case "/mutate-cronjob":
+		mutated, err = MutateCronjobs(body)
+	case "/mutate-job":
+		mutated, err = MutateJobs(body)
+	}
+
 	if err != nil {
-		log.Println(err)
+		log.Errorf("Error mutating: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		_, err := fmt.Fprintf(w, "%s", err)
+		_, err := fmt.Fprintf(w, "Error mutating: %s", err)
 		if err != nil {
-			log.Errorf("error writing response: %v", err)
+			log.Errorf(writingErrorFormat, err)
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(mutated)
 	if err != nil {
-		log.Errorf("error writing response: %v", err)
+		log.Errorf(writingErrorFormat, err)
 	}
 }
 

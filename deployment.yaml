@@ -92,17 +92,34 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: antivax/antivax-tls
 webhooks:
-  - name: antivax.default.svc.cluster.local
+  - name: antivax-cronjob.antivax.svc.cluster.local
     clientConfig:
       service:
         name: antivax
         namespace: antivax
-        path: "/mutate"
+        path: "/mutate-cronjob"
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["batch"]
         apiVersions: ["v1"]
         resources: ["cronjobs"]
+    namespaceSelector:
+      matchLabels:
+        antivax: enabled
+    admissionReviewVersions:
+      - v1
+    sideEffects: None
+  - name: antivax-job.antivax.svc.cluster.local
+    clientConfig:
+      service:
+        name: antivax
+        namespace: antivax
+        path: "/mutate-job"
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [ "batch" ]
+        apiVersions: [ "v1" ]
+        resources: [ "jobs" ]
     namespaceSelector:
       matchLabels:
         antivax: enabled
