@@ -12,17 +12,32 @@ func TestMutate(t *testing.T) {
 	tests := []struct {
 		name     string
 		file     string
+		kind     string
 		expected string
 	}{
 		{
 			name:     "When the cronjob needs to be injected then the patch should be the annotation",
 			file:     "testdata/injectable_cronjob.json",
+			kind:     "cronjob",
 			expected: `[{"op":"add","path":"/spec/jobTemplate/spec/template/metadata/annotations","value":{"linkerd.io/inject":"disabled"}}]`,
 		},
 		{
 			name:     "When the cronjob does not need to be injected then the patch should be empty",
 			file:     "testdata/non_injectable_cronjob.json",
-			expected: "[{}]",
+			kind:     "cronjob",
+			expected: "[]",
+		},
+		{
+			name:     "When the job needs to be injected then the patch should be the annotation",
+			file:     "testdata/injectable_job.json",
+			kind:     "job",
+			expected: `[{"op":"add","path":"/spec/template/metadata/annotations","value":{"linkerd.io/inject":"disabled"}}]`,
+		},
+		{
+			name:     "When the job does not need to be injected then the patch should be empty",
+			file:     "testdata/non_injectable_job.json",
+			kind:     "job",
+			expected: "[]",
 		},
 	}
 
@@ -31,7 +46,15 @@ func TestMutate(t *testing.T) {
 			b, err := os.ReadFile(tt.file)
 			assert.NoError(t, err)
 
-			response, err := Mutate(b)
+			var response []byte
+			if tt.kind == "cronjob" {
+				response, err = MutateCronjobs(b)
+			} else if tt.kind == "job" {
+				response, err = MutateJobs(b)
+			} else {
+				t.Fatalf("unknown kind %s", tt.kind)
+			}
+
 			assert.NoError(t, err)
 
 			r := v1beta1.AdmissionReview{}

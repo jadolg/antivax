@@ -1,0 +1,149 @@
+{
+  "kind": "AdmissionReview",
+  "apiVersion": "admission.k8s.io/v1",
+  "request": {
+    "uid": "ad69db33-a235-435f-b003-40ae1a91a3ca",
+    "kind": {
+      "group": "batch",
+      "version": "v1",
+      "kind": "Job"
+    },
+    "resource": {
+      "group": "batch",
+      "version": "v1",
+      "resource": "jobs"
+    },
+    "requestKind": {
+      "group": "batch",
+      "version": "v1",
+      "kind": "Job"
+    },
+    "requestResource": {
+      "group": "batch",
+      "version": "v1",
+      "resource": "jobs"
+    },
+    "name": "testjob",
+    "namespace": "antivax",
+    "operation": "CREATE",
+    "userInfo": {
+      "username": "jorge.diaz",
+      "uid": "jorge.diaz",
+      "groups": [
+        "admin",
+        "system:authenticated"
+      ]
+    },
+    "object": {
+      "kind": "Job",
+      "apiVersion": "batch/v1",
+      "metadata": {
+        "name": "testjob",
+        "namespace": "antivax",
+        "creationTimestamp": null,
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"batch/v1\",\"kind\":\"Job\",\"metadata\":{\"annotations\":{},\"name\":\"testjob\",\"namespace\":\"antivax\"},\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"linkerd.io/inject\":\"enabled\"}},\"spec\":{\"automountServiceAccountToken\":false,\"containers\":[{\"command\":[\"/bin/sh\",\"-c\",\"date; echo Hello!\"],\"image\":\"busybox:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"testjob\"}],\"restartPolicy\":\"OnFailure\"}}}}\n"
+        },
+        "managedFields": [
+          {
+            "manager": "kubectl-client-side-apply",
+            "operation": "Update",
+            "apiVersion": "batch/v1",
+            "time": "2024-05-24T11:14:53Z",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:metadata": {
+                "f:annotations": {
+                  ".": {},
+                  "f:kubectl.kubernetes.io/last-applied-configuration": {}
+                }
+              },
+              "f:spec": {
+                "f:backoffLimit": {},
+                "f:completionMode": {},
+                "f:completions": {},
+                "f:parallelism": {},
+                "f:suspend": {},
+                "f:template": {
+                  "f:metadata": {
+                    "f:annotations": {
+                      ".": {},
+                      "f:linkerd.io/inject": {}
+                    }
+                  },
+                  "f:spec": {
+                    "f:automountServiceAccountToken": {},
+                    "f:containers": {
+                      "k:{\"name\":\"testjob\"}": {
+                        ".": {},
+                        "f:command": {},
+                        "f:image": {},
+                        "f:imagePullPolicy": {},
+                        "f:name": {},
+                        "f:resources": {},
+                        "f:terminationMessagePath": {},
+                        "f:terminationMessagePolicy": {}
+                      }
+                    },
+                    "f:dnsPolicy": {},
+                    "f:restartPolicy": {},
+                    "f:schedulerName": {},
+                    "f:securityContext": {},
+                    "f:terminationGracePeriodSeconds": {}
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "spec": {
+        "parallelism": 1,
+        "completions": 1,
+        "backoffLimit": 6,
+        "template": {
+          "metadata": {
+            "creationTimestamp": null,
+            "annotations": {
+              "linkerd.io/inject": "enabled"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "testjob",
+                "image": "busybox:latest",
+                "command": [
+                  "/bin/sh",
+                  "-c",
+                  "date; echo Hello!"
+                ],
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "IfNotPresent"
+              }
+            ],
+            "restartPolicy": "OnFailure",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "automountServiceAccountToken": false,
+            "securityContext": {},
+            "schedulerName": "default-scheduler"
+          }
+        },
+        "completionMode": "NonIndexed",
+        "suspend": false
+      },
+      "status": {}
+    },
+    "oldObject": null,
+    "dryRun": false,
+    "options": {
+      "kind": "CreateOptions",
+      "apiVersion": "meta.k8s.io/v1",
+      "fieldManager": "kubectl-client-side-apply",
+      "fieldValidation": "Strict"
+    }
+  }
+}
