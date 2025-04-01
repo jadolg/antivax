@@ -47,11 +47,12 @@ func TestMutate(t *testing.T) {
 			assert.NoError(t, err)
 
 			var response []byte
-			if tt.kind == "cronjob" {
+			switch tt.kind {
+			case "cronjob":
 				response, err = MutateCronjobs(b)
-			} else if tt.kind == "job" {
+			case "job":
 				response, err = MutateJobs(b)
-			} else {
+			default:
 				t.Fatalf("unknown kind %s", tt.kind)
 			}
 
