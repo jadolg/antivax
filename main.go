@@ -33,7 +33,12 @@ func main() {
 
 func Mutate(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Errorf("Error closing request body: %v", err)
+		}
+	}(r.Body)
 	const writingErrorFormat = "Error writing response: %v"
 	if err != nil {
 		log.Println(err)
