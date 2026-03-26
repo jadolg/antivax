@@ -30,14 +30,10 @@ spec:
   dnsNames:
     - antivax.antivax.svc.cluster.local
     - antivax.antivax.svc
-  isCA: true
   privateKey:
     algorithm: ECDSA
   usages:
-    - cert sign
-    - crl sign
     - server auth
-    - client auth
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -45,6 +41,7 @@ metadata:
   name: antivax
   namespace: antivax
 spec:
+  replicas: 2
   selector:
     matchLabels:
       app: antivax
@@ -57,6 +54,12 @@ spec:
       containers:
         - image: ghcr.io/jadolg/antivax:latest
           name: antivax
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
           volumeMounts:
             - name: tls
               mountPath: "/etc/admission-webhook/tls"
@@ -93,6 +96,7 @@ metadata:
     cert-manager.io/inject-ca-from: antivax/antivax-tls
 webhooks:
   - name: antivax-cronjob.antivax.svc.cluster.local
+    failurePolicy: Fail
     clientConfig:
       service:
         name: antivax
@@ -110,6 +114,7 @@ webhooks:
       - v1
     sideEffects: None
   - name: antivax-job.antivax.svc.cluster.local
+    failurePolicy: Fail
     clientConfig:
       service:
         name: antivax

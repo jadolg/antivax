@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/admission/v1beta1"
+	admission "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"os"
 	"testing"
@@ -58,7 +58,7 @@ func TestMutate(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			r := v1beta1.AdmissionReview{}
+			r := admission.AdmissionReview{}
 			err = json.Unmarshal(response, &r)
 			assert.NoError(t, err, "failed to unmarshal with error %s", err)
 

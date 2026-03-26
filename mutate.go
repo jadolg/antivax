@@ -17,54 +17,19 @@ func MutateCronjobs(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
-	var err error
-	var cronjob *batchv1.CronJob
-
-	var responseBody []byte
 	ar := admReview.Request
-	resp := admission.AdmissionResponse{}
-
-	if ar != nil {
-		if err := json.Unmarshal(ar.Object.Raw, &cronjob); err != nil {
-			return nil, fmt.Errorf("unable unmarshal cronjob json object %v", err)
-		}
-
-		resp.Allowed = true
-		resp.UID = ar.UID
-		pT := admission.PatchTypeJSONPatch
-		resp.PatchType = &pT
-
-		var op map[string]interface{}
-		if _, present := cronjob.Spec.JobTemplate.Spec.Template.Annotations[LinkerdInjectAnnotation]; !present {
-			log.WithField("cronjob", cronjob.Name).WithField("namespace", cronjob.Namespace).Info("Patch Cronjob")
-			op = map[string]interface{}{
-				"op":    "add",
-				"path":  "/spec/jobTemplate/spec/template/metadata/annotations",
-				"value": map[string]string{LinkerdInjectAnnotation: "disabled"},
-			}
-			resp.Patch, err = json.Marshal([]interface{}{op})
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			resp.Patch, err = json.Marshal([]interface{}{})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		resp.Result = &metav1.Status{
-			Status: "Success",
-		}
-
-		admReview.Response = &resp
-		responseBody, err = json.Marshal(admReview)
-		if err != nil {
-			return nil, err
-		}
+	if ar == nil {
+		return nil, fmt.Errorf("received admission review with nil request")
 	}
 
-	return responseBody, nil
+	var cronjob batchv1.CronJob
+	if err := json.Unmarshal(ar.Object.Raw, &cronjob); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal cronjob json object: %v", err)
+	}
+
+	annotations := cronjob.Spec.JobTemplate.Spec.Template.Annotations
+	const annotationsPath = "/spec/jobTemplate/spec/template/metadata/annotations"
+	return buildResponse(&admReview, ar, annotations, annotationsPath, "cronjob", cronjob.Name, cronjob.Namespace)
 }
 
 func MutateJobs(body []byte) ([]byte, error) {
@@ -73,51 +38,62 @@ func MutateJobs(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
-	var err error
-	var job *batchv1.Job
-
-	var responseBody []byte
 	ar := admReview.Request
-	resp := admission.AdmissionResponse{}
+	if ar == nil {
+		return nil, fmt.Errorf("received admission review with nil request")
+	}
 
-	if ar != nil {
-		if err := json.Unmarshal(ar.Object.Raw, &job); err != nil {
-			return nil, fmt.Errorf("unable unmarshal job json object %v", err)
-		}
-		resp.Allowed = true
-		resp.UID = ar.UID
-		pT := admission.PatchTypeJSONPatch
-		resp.PatchType = &pT
+	var job batchv1.Job
+	if err := json.Unmarshal(ar.Object.Raw, &job); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal job json object: %v", err)
+	}
 
-		var op map[string]interface{}
-		if _, present := job.Spec.Template.Annotations[LinkerdInjectAnnotation]; !present {
-			log.WithField("job", job.Name).WithField("namespace", job.Namespace).Info("Patch Job")
-			op = map[string]interface{}{
+	annotations := job.Spec.Template.Annotations
+	const annotationsPath = "/spec/template/metadata/annotations"
+	return buildResponse(&admReview, ar, annotations, annotationsPath, "job", job.Name, job.Namespace)
+}
+
+func buildResponse(admReview *admission.AdmissionReview, ar *admission.AdmissionRequest, annotations map[string]string, annotationsPath, kind, name, namespace string) ([]byte, error) {
+	resp := admission.AdmissionResponse{
+		Allowed: true,
+		UID:     ar.UID,
+	}
+	pT := admission.PatchTypeJSONPatch
+	resp.PatchType = &pT
+
+	patches := []interface{}{}
+	if _, present := annotations[LinkerdInjectAnnotation]; !present {
+		log.WithField(kind, name).WithField("namespace", namespace).Infof("Patching %s", kind)
+		if len(annotations) == 0 {
+			// No annotations exist yet — add the entire map.
+			patches = append(patches, map[string]interface{}{
 				"op":    "add",
-				"path":  "/spec/template/metadata/annotations",
+				"path":  annotationsPath,
 				"value": map[string]string{LinkerdInjectAnnotation: "disabled"},
-			}
-			resp.Patch, err = json.Marshal([]interface{}{op})
-			if err != nil {
-				return nil, err
-			}
+			})
 		} else {
-			resp.Patch, err = json.Marshal([]interface{}{})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		resp.Result = &metav1.Status{
-			Status: "Success",
-		}
-
-		admReview.Response = &resp
-		responseBody, err = json.Marshal(admReview)
-		if err != nil {
-			return nil, err
+			// Other annotations exist — add only our key to avoid overwriting them.
+			// "/" in a JSON Pointer key is encoded as "~1".
+			patches = append(patches, map[string]interface{}{
+				"op":    "add",
+				"path":  annotationsPath + "/linkerd.io~1inject",
+				"value": "disabled",
+			})
 		}
 	}
 
+	var err error
+	resp.Patch, err = json.Marshal(patches)
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Result = &metav1.Status{Status: "Success"}
+	admReview.Response = &resp
+
+	responseBody, err := json.Marshal(admReview)
+	if err != nil {
+		return nil, err
+	}
 	return responseBody, nil
 }

@@ -34,23 +34,21 @@ func main() {
 func Mutate(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
+		if err := Body.Close(); err != nil {
 			log.Errorf("Error closing request body: %v", err)
 		}
 	}(r.Body)
-	const writingErrorFormat = "Error writing response: %v"
+
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := fmt.Fprintf(w, "%s", err)
-		if err != nil {
-			log.Errorf(writingErrorFormat, err)
-		}
+		log.Errorf("Error reading request body: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	mutated := []byte{}
+
 	log.Debugf("Received request: %s", r.URL.Path)
 	log.Debugf("recv: %s\n", string(body))
+
+	var mutated []byte
 	switch r.URL.Path {
 	case "/mutate-cronjob":
 		mutated, err = MutateCronjobs(body)
@@ -60,17 +58,13 @@ func Mutate(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Errorf("Error mutating: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := fmt.Fprintf(w, "Error mutating: %s", err)
-		if err != nil {
-			log.Errorf(writingErrorFormat, err)
-		}
+		http.Error(w, fmt.Sprintf("Error mutating: %s", err), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(mutated)
-	if err != nil {
-		log.Errorf(writingErrorFormat, err)
+	if _, err = w.Write(mutated); err != nil {
+		log.Errorf("Error writing response: %v", err)
 	}
 }
 
