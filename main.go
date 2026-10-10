@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {

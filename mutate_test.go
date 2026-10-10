@@ -1,11 +1,12 @@
 package main
 
 import (
+	"os"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/util/json"
-	"os"
-	"testing"
 )
 
 func TestMutate(t *testing.T) {
